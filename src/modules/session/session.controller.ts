@@ -43,6 +43,20 @@ export class SessionController {
     return sessions.map(s => this.transformSession(s));
   }
 
+  @Get('stats/overview')
+  @ApiOperation({ summary: 'Get session statistics for multi-session monitoring' })
+  @ApiResponse({ status: 200, description: 'Session statistics' })
+  async getStats(): Promise<{
+    total: number;
+    active: number;
+    ready: number;
+    disconnected: number;
+    byStatus: Record<string, number>;
+    memoryUsage: { heapUsed: number; heapTotal: number; rss: number };
+  }> {
+    return this.sessionService.getStats();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get session by ID' })
   @ApiParam({ name: 'id', description: 'Session ID' })
@@ -156,17 +170,4 @@ export class SessionController {
 </html>`);
   }
 
-  @Get('stats/overview')
-  @ApiOperation({ summary: 'Get session statistics for multi-session monitoring' })
-  @ApiResponse({ status: 200, description: 'Session statistics' })
-  async getStats(): Promise<{
-    total: number;
-    active: number;
-    ready: number;
-    disconnected: number;
-    byStatus: Record<string, number>;
-    memoryUsage: { heapUsed: number; heapTotal: number; rss: number };
-  }> {
-    return this.sessionService.getStats();
-  }
 }

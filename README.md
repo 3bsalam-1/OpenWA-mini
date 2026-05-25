@@ -18,7 +18,7 @@ A self-hosted, single-container REST API for sending WhatsApp OTPs (and bulk tex
 | **API key auth** | OPERATOR / ADMIN roles — set your key in `.env` or let it auto-generate |
 | **Rate limiting** | Three-tier (per-second, per-minute, per-hour) |
 | **Proxy support** | Per-session HTTP/SOCKS proxy |
-| **Plugin hooks** | Intercept and modify events (`message:sending`, `session:ready`, …) |
+| **Plugin hooks** | Internal event lifecycle hooks (`message:sending`, `session:ready`, …) — for engine plugins, not HTTP |
 | **Health checks** | `/api/health`, `/api/health/live`, `/api/health/ready` |
 | **Swagger UI** | Interactive docs at `/api/docs` |
 
@@ -122,6 +122,8 @@ API_KEY=your-strong-secret-key
 
 Data is persisted in the `openwa-mini-data` Docker volume (or `./data/` locally).
 
+> **Note:** Two SQLite files are created at runtime — `data/main.sqlite` stores API keys and auth data (path is fixed, not configurable), and `data/openwa-mini.sqlite` stores sessions, messages, and batches (path set via `DATABASE_NAME`).
+
 ---
 
 ## API Reference
@@ -155,10 +157,14 @@ Pass the key as `X-API-Key: <key>` header (or `Authorization: Bearer <key>`).
 
 ### Auth / API Keys
 
+All `/api/auth/api-keys` endpoints require the `admin` role.
+
 | Method | Route | Description |
 |---|---|---|
+| `POST` | `/api/auth/validate` | Validate the current API key — returns role info (any role) |
 | `POST` | `/api/auth/api-keys` | Create a new key (returns raw key once) |
 | `GET` | `/api/auth/api-keys` | List all keys |
+| `GET` | `/api/auth/api-keys/:id` | Get a single key by ID |
 | `PUT` | `/api/auth/api-keys/:id` | Update name, role, or IP restrictions |
 | `DELETE` | `/api/auth/api-keys/:id` | Delete a key |
 | `POST` | `/api/auth/api-keys/:id/revoke` | Revoke without deleting |
