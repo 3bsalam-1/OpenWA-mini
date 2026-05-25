@@ -12,7 +12,7 @@ export default () => ({
   // Data Storage Database configuration (SQLite or PostgreSQL)
   dataDatabase: {
     type: process.env.DATABASE_TYPE || 'sqlite',
-    database: process.env.DATABASE_NAME || './data/openwa.sqlite',
+    database: process.env.DATABASE_NAME || './data/openwa-mini.sqlite',
     host: process.env.DATABASE_HOST || 'localhost',
     port: parseInt(process.env.DATABASE_PORT || '5432', 10),
     username: process.env.DATABASE_USERNAME,

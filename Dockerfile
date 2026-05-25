@@ -1,4 +1,4 @@
-# OpenWA — Minimal OTP Gateway
+# OpenWA Mini — Minimal OTP Gateway
 # Multi-stage build: builder compiles TypeScript, production image runs it
 
 # ===== Stage 1: Builder =====
@@ -48,7 +48,7 @@ RUN apt-get update && apt-get install -y \
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-RUN groupadd -r openwa && useradd -r -g openwa openwa
+RUN groupadd -r openwa-mini && useradd -r -g openwa-mini openwa-mini
 
 WORKDIR /app
 
@@ -58,9 +58,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 RUN mkdir -p ./data/sessions && \
-    chown -R openwa:openwa /app
+    chown -R openwa-mini:openwa-mini /app
 
-USER openwa
+USER openwa-mini
 
 EXPOSE 2785
 

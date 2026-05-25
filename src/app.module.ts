@@ -57,7 +57,7 @@ import { PluginsModule } from './core/plugins';
             port: configService.get<number>('dataDatabase.port'),
             username: configService.get<string>('dataDatabase.username'),
             password: configService.get<string>('dataDatabase.password'),
-            database: 'openwa',
+            database: 'openwa-mini',
             synchronize: configService.get<boolean>('dataDatabase.synchronize', false),
             migrationsRun: true,
             retryAttempts: 10,
@@ -69,7 +69,7 @@ import { PluginsModule } from './core/plugins';
         return {
           ...baseConfig,
           type: 'sqlite' as const,
-          database: configService.get<string>('dataDatabase.database', './data/openwa.sqlite'),
+          database: configService.get<string>('dataDatabase.database', './data/openwa-mini.sqlite'),
           synchronize: configService.get<boolean>('dataDatabase.synchronize', true),
           migrationsRun: !configService.get<boolean>('dataDatabase.synchronize', true),
         };

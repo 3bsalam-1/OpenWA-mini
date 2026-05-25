@@ -1,4 +1,4 @@
-# OpenWA — Minimal WhatsApp OTP Gateway
+# OpenWA Mini — Minimal WhatsApp OTP Gateway
 
 A self-hosted, single-container REST API for sending WhatsApp OTPs (and bulk text messages) to multiple phone numbers. Built on [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js) and NestJS.
 
@@ -30,8 +30,8 @@ A self-hosted, single-container REST API for sending WhatsApp OTPs (and bulk tex
 
 ```bash
 # 1. Clone
-git clone https://github.com/rmyndharis/OpenWA.git
-cd OpenWA
+git clone https://github.com/3bsalam-1/OpenWA-mini.git
+cd OpenWA-mini
 
 # 2. Set your API key (optional — auto-generated if omitted)
 echo "API_KEY=your-secret-key" > .env
@@ -48,7 +48,7 @@ Docs:  http://localhost:2785/api/docs
 If you skipped step 2, retrieve the auto-generated key from the logs:
 
 ```bash
-docker compose logs openwa-api | grep "API Key" -A1
+docker compose logs openwa-mini-api | grep "API Key" -A1
 ```
 
 ### Local development
@@ -109,7 +109,7 @@ NODE_ENV=production
 
 # SQLite databases
 DATABASE_TYPE=sqlite
-DATABASE_NAME=./data/openwa.sqlite
+DATABASE_NAME=./data/openwa-mini.sqlite
 
 # Chromium / Puppeteer
 PUPPETEER_HEADLESS=true
@@ -120,7 +120,7 @@ PUPPETEER_ARGS=--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--d
 API_KEY=your-strong-secret-key
 ```
 
-Data is persisted in the `openwa-data` Docker volume (or `./data/` locally).
+Data is persisted in the `openwa-mini-data` Docker volume (or `./data/` locally).
 
 ---
 
@@ -302,7 +302,7 @@ curl -s -X POST $BASE/sessions \
 docker compose up -d --build
 
 # View startup logs including API key
-docker compose logs -f openwa-api
+docker compose logs -f openwa-mini-api
 
 # Restart with a new API_KEY
 echo "API_KEY=new-key" > .env
@@ -312,14 +312,14 @@ docker compose up -d --force-recreate
 docker compose down
 ```
 
-The container runs as a non-root `openwa` user. All persistent state (SQLite files, session browser profiles) lives in the `openwa-data` volume mounted at `/app/data`.
+The container runs as a non-root `openwa-mini` user. All persistent state (SQLite files, session browser profiles) lives in the `openwa-mini-data` volume mounted at `/app/data`.
 
 ---
 
 ## Project Structure
 
 ```
-openwa/
+openwa-mini/
 ├── src/
 │   ├── main.ts                        # Bootstrap, Swagger, CORS, validation
 │   ├── app.module.ts                  # Root module (TypeORM ×2, throttler)
@@ -343,7 +343,7 @@ openwa/
 │       └── health/                    # /health, /health/live, /health/ready
 ├── data/                              # Runtime data — gitignored
 │   ├── main.sqlite                    # Auth database (API keys)
-│   ├── openwa.sqlite                  # Sessions, messages, batches
+│   ├── openwa-mini.sqlite             # Sessions, messages, batches
 │   └── sessions/                      # whatsapp-web.js LocalAuth state per session
 ├── .env.minimal                       # Configuration reference — copy to .env
 ├── docker-compose.yml                 # Single-container deployment

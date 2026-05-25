@@ -1,8 +1,8 @@
 {
-  "name": "openwa",
-  "version": "0.1.6",
+  "name": "openwa-mini",
+  "version": "0.0.1",
   "description": "Open Source WhatsApp API Gateway - Free, Self-Hosted HTTP API for WhatsApp",
-  "author": "Yudhi Armyndharis & OpenWA Contributors",
+  "author": "Yudhi Armyndharis & OpenWA Mini Contributors",
   "private": true,
   "license": "MIT",
   "scripts": {

@@ -1,9 +1,9 @@
 services:
-  openwa-api:
+  openwa-mini-api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: openwa-api
+    container_name: openwa-mini-api
     restart: unless-stopped
     ports:
       - '${API_PORT:-2785}:2785'
@@ -12,7 +12,7 @@ services:
       - PORT=2785
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - DATABASE_TYPE=sqlite
-      - DATABASE_NAME=/app/data/openwa.sqlite
+      - DATABASE_NAME=/app/data/openwa-mini.sqlite
       - ENGINE_TYPE=${ENGINE_TYPE:-whatsapp-web.js}
       - SESSION_DATA_PATH=/app/data/sessions
       - PUPPETEER_HEADLESS=${PUPPETEER_HEADLESS:-true}
@@ -21,7 +21,7 @@ services:
       - PLUGINS_DIR=/app/data/plugins
       - API_KEY=${API_KEY:-}
     volumes:
-      - openwa-data:/app/data
+      - openwa-mini-data:/app/data
     healthcheck:
       test:
         [
@@ -36,5 +36,5 @@ services:
       start_period: 30s
 
 volumes:
-  openwa-data:
+  openwa-mini-data:
     driver: local
