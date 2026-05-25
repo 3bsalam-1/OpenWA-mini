@@ -11,7 +11,6 @@ export enum LogLevel {
 export interface LogContext {
   sessionId?: string;
   messageId?: string;
-  webhookId?: string;
   action?: string;
   duration?: number;
   [key: string]: unknown;

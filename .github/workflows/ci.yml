@@ -59,32 +59,10 @@ jobs:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
 
-  dashboard:
-    name: Dashboard
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: dashboard/package-lock.json
-
-      - name: Install dependencies
-        run: cd dashboard && npm ci
-
-      - name: Run ESLint
-        run: cd dashboard && npm run lint
-
-      - name: Build dashboard
-        run: cd dashboard && npm run build
-
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, test, dashboard]
+    needs: [lint, test]
     steps:
       - uses: actions/checkout@v6
 

@@ -1,319 +1,370 @@
-<p align="center">
-  <img src="docs/logo/openwa_logo.webp" alt="OpenWA Logo" width="200"/>
-</p>
+# OpenWA — Minimal WhatsApp OTP Gateway
 
-<h1 align="center">OpenWA</h1>
-<p align="center">
-  <strong>Open Source WhatsApp API Gateway</strong>
-</p>
+A self-hosted, single-container REST API for sending WhatsApp OTPs (and bulk text messages) to multiple phone numbers. Built on [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js) and NestJS.
 
-<p align="center">
-  <a href="#-features">Features</a> •
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-documentation">Docs</a> •
-  <a href="#-api-examples">API</a> •
-  <a href="#-contributing">Contributing</a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.6-blue.svg" alt="Version"/>
-  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"/>
-  <img src="https://img.shields.io/badge/node-22_LTS-brightgreen.svg" alt="Node"/>
-  <img src="https://img.shields.io/badge/NestJS-11.x-red.svg" alt="NestJS"/>
-  <img src="https://img.shields.io/badge/docker-ready-blue.svg" alt="Docker"/>
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6.svg" alt="TypeScript"/>
-</p>
+> **Scope** — This is a stripped-down build focused on OTP delivery. It keeps only what you need: multi-session management, QR-code authentication, single-text send, and bulk-text send. No Redis, no S3, no dashboard, no sidecar services — just SQLite and a single Docker container.
 
 ---
 
-## ✨ Why OpenWA?
+## Features
 
-**OpenWA** is a free, open-source WhatsApp API Gateway designed for developers who need full control over their messaging infrastructure—without vendor lock-in or hidden paywalls.
-
-Built on a **pluggable architecture**, OpenWA lets you swap database engines (SQLite/PostgreSQL), storage backends (Local/S3), and cache layers (Memory/Redis) without changing a single line of application code.
-
-|                               |                                                              |
-| ----------------------------- | ------------------------------------------------------------ |
-| 🔓 **100% Open Source**       | No licensing fees, no feature locks, full source code access |
-| 🏗️ **Pluggable Architecture** | Swap adapters for database, storage, and cache via config    |
-| 🖥️ **Full Dashboard**         | Modern React UI for session, webhook, and API key management |
-| 🔹 **Multi-Session Ready**    | Run multiple WhatsApp sessions concurrently on one instance  |
-| 🐳 **Docker Native**          | Production-ready with zero configuration                     |
-| 🔗 **n8n Integration**        | Community nodes for workflow automation                      |
-
----
-
-## 🎯 Features
-
-### Core Features
-
-| Feature       | Status | Description                          |
-| ------------- | ------ | ------------------------------------ |
-| REST API      | ✅     | Full WhatsApp API via HTTP endpoints |
-| Multi-Session | ✅     | Manage multiple WhatsApp accounts    |
-| Webhooks      | ✅     | Real-time events with HMAC signature |
-| Web Dashboard | ✅     | Visual management interface          |
-| API Key Auth  | ✅     | Secure API authentication            |
-| Swagger Docs  | ✅     | Interactive API documentation        |
-
-### Messaging
-
-| Feature           | Status | Description                      |
-| ----------------- | ------ | -------------------------------- |
-| Text Messages     | ✅     | Send/receive text messages       |
-| Media Messages    | ✅     | Images, videos, documents, audio |
-| Message Reactions | ✅     | React to messages with emoji     |
-| Bulk Messaging    | ✅     | Send to multiple recipients      |
-| Message Status    | ✅     | Track delivery and read receipts |
-
-### Advanced
-
-| Feature             | Status | Description                        |
-| ------------------- | ------ | ---------------------------------- |
-| Groups API          | ✅     | Create, manage, and message groups |
-| Channels/Newsletter | ✅     | WhatsApp Channels support          |
-| Labels Management   | ✅     | Organize chats with labels         |
-| Proxy Support       | ✅     | Per-session proxy configuration    |
-| Rate Limiting       | ✅     | Configurable request limits        |
-| CIDR Whitelisting   | ✅     | IP-based access control            |
-| Audit Logging       | ✅     | Track all API operations           |
-
-### Infrastructure
-
-| Feature          | Status | Description                    |
-| ---------------- | ------ | ------------------------------ |
-| SQLite           | ✅     | Zero-config embedded database  |
-| PostgreSQL       | ✅     | Production-grade database      |
-| Redis Cache      | ✅     | Optional performance caching   |
-| S3/MinIO Storage | ✅     | Scalable media storage         |
-| Docker           | ✅     | One-command deployment         |
-| Health Checks    | ✅     | Kubernetes-ready probes        |
-| Data Migration   | ✅     | Export/import between backends |
+| Capability | Detail |
+|---|---|
+| **Multi-session** | Run multiple WhatsApp numbers on one instance |
+| **QR authentication** | Scan from a browser — `/qr/scan` auto-refreshes every 3 s |
+| **Text send** | Single message to one recipient |
+| **Bulk send** | Up to 100 recipients per batch, variable substitution, configurable delay |
+| **Message history** | Queryable log of sent/received messages (SQLite) |
+| **API key auth** | OPERATOR / ADMIN roles — set your key in `.env` or let it auto-generate |
+| **Rate limiting** | Three-tier (per-second, per-minute, per-hour) |
+| **Proxy support** | Per-session HTTP/SOCKS proxy |
+| **Plugin hooks** | Intercept and modify events (`message:sending`, `session:ready`, …) |
+| **Health checks** | `/api/health`, `/api/health/live`, `/api/health/ready` |
+| **Swagger UI** | Interactive docs at `/api/docs` |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### Option A: Docker (Recommended)
+### Docker (recommended)
 
 ```bash
-# Clone and start
-git clone https://github.com/rmyndharis/OpenWA.git
-cd OpenWA
-docker compose -f docker-compose.dev.yml up -d
-
-# Access
-# Dashboard: http://localhost:2886
-# API: http://localhost:2785/api
-# Swagger: http://localhost:2785/api/docs
-```
-
-### Option B: Local Development
-
-```bash
-# Clone repository
+# 1. Clone
 git clone https://github.com/rmyndharis/OpenWA.git
 cd OpenWA
 
-# Install dependencies (includes dashboard)
-npm install
+# 2. Set your API key (optional — auto-generated if omitted)
+echo "API_KEY=your-secret-key" > .env
 
-# Start API + Dashboard (config is auto-generated on first run)
-npm run dev
-
-# Access
-# Dashboard: http://localhost:2886
-# API: http://localhost:2785/api
-# Swagger: http://localhost:2785/api/docs
-```
-
----
-
-## 🏭 Production Deployment
-
-For production, use the main `docker-compose.yml` with optional services:
-
-```bash
-# Basic production (SQLite, local storage)
+# 3. Start
 docker compose up -d
-
-# With PostgreSQL database
-docker compose --profile postgres up -d
-
-# Full stack (PostgreSQL, Redis, Dashboard, Traefik)
-docker compose --profile full up -d
 ```
 
-| Profile          | Services              |
-| ---------------- | --------------------- |
-| `postgres`       | PostgreSQL database   |
-| `redis`          | Redis cache           |
-| `minio`          | S3-compatible storage |
-| `with-dashboard` | Web dashboard         |
-| `with-proxy`     | Traefik reverse proxy |
-| `full`           | All services above    |
+```
+API:   http://localhost:2785/api
+Docs:  http://localhost:2785/api/docs
+```
 
-> **Development vs Production**
->
-> - Development (`docker-compose.dev.yml`): SQLite, local storage, both API & Dashboard included
-> - Production (`docker-compose.yml`): Configurable database, profiles for optional services
+If you skipped step 2, retrieve the auto-generated key from the logs:
 
-## 🔌 Ports
+```bash
+docker compose logs openwa-api | grep "API Key" -A1
+```
 
-| Service   | Port            | Description              |
-| --------- | --------------- | ------------------------ |
-| API       | `2785`          | REST API endpoints       |
-| Dashboard | `2886`          | Web management interface |
-| Swagger   | `2785/api/docs` | Interactive API docs     |
+### Local development
+
+```bash
+cp .env.minimal .env        # edit API_KEY and any other vars
+npm install
+npm run start:dev
+```
 
 ---
 
-## 📡 API Examples
+## API Key
 
-### Create a Session
+The API key controls access to all protected endpoints. There are two ways to manage it.
 
-```bash
-curl -X POST http://localhost:2785/api/sessions \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{"name": "my-bot"}'
+### Set a fixed key in `.env`
+
+Add `API_KEY` to your `.env` file (or Docker Compose environment):
+
+```env
+API_KEY=your-strong-secret-key
 ```
 
-### Start Session & Get QR Code
+On every restart the server reads this value and ensures it is the active default admin key. Changing the value and restarting replaces the old key automatically — no database cleanup needed.
+
+### Auto-generated key (no `API_KEY` set)
+
+On first boot the server generates a random key, prints it in the startup banner, and saves it to `data/.api-key`. Subsequent restarts re-display the saved key. Use this mode for quick local testing; pin it via `API_KEY` for any persistent deployment.
+
+### Creating additional keys via API
 
 ```bash
-# Start the session
-curl -X POST http://localhost:2785/api/sessions/{sessionId}/start \
-  -H "X-API-Key: YOUR_API_KEY"
-
-# Get QR code (scan with WhatsApp)
-curl http://localhost:2785/api/sessions/{sessionId}/qr \
-  -H "X-API-Key: YOUR_API_KEY"
+curl -s -X POST http://localhost:2785/api/auth/api-keys \
+  -H "X-API-Key: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "backend-service", "role": "operator"}'
 ```
 
-### Send a Message
+The raw key is returned once — save it immediately.
+
+| Role | Permissions |
+|---|---|
+| `admin` | Full access including key management |
+| `operator` | Create sessions, send messages |
+| `viewer` | Read-only (list sessions, message history) |
+
+---
+
+## Configuration
+
+Copy `.env.minimal` to `.env` and edit what you need. All values have sensible defaults.
+
+```env
+# Server
+PORT=2785
+NODE_ENV=production
+
+# SQLite databases
+DATABASE_TYPE=sqlite
+DATABASE_NAME=./data/openwa.sqlite
+
+# Chromium / Puppeteer
+PUPPETEER_HEADLESS=true
+PUPPETEER_ARGS=--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
+
+# API key — fixed key for all restarts.
+# Remove this line to auto-generate a random key on first boot.
+API_KEY=your-strong-secret-key
+```
+
+Data is persisted in the `openwa-data` Docker volume (or `./data/` locally).
+
+---
+
+## API Reference
+
+Pass the key as `X-API-Key: <key>` header (or `Authorization: Bearer <key>`).
+
+### Sessions
+
+| Method | Route | Role | Description |
+|---|---|---|---|
+| `POST` | `/api/sessions` | operator | Create a session |
+| `GET` | `/api/sessions` | any | List all sessions |
+| `GET` | `/api/sessions/:id` | any | Get session details |
+| `DELETE` | `/api/sessions/:id` | operator | Delete a session |
+| `POST` | `/api/sessions/:id/start` | operator | Start WhatsApp connection |
+| `POST` | `/api/sessions/:id/stop` | operator | Disconnect |
+| `GET` | `/api/sessions/:id/qr` | any | QR code as JSON `{ qrCode: "data:image/png;base64,…" }` |
+| `GET` | `/api/sessions/:id/qr/image` | any | QR code as raw PNG — open directly in a browser |
+| `GET` | `/api/sessions/:id/qr/scan` | any | HTML page — shows QR, auto-refreshes until authenticated |
+| `GET` | `/api/sessions/stats/overview` | any | Session counts + memory usage |
+
+### Messages
+
+| Method | Route | Role | Description |
+|---|---|---|---|
+| `POST` | `/api/sessions/:id/messages/send-text` | operator | Send one text message |
+| `POST` | `/api/sessions/:id/messages/send-bulk` | operator | Send to multiple recipients (async) |
+| `GET` | `/api/sessions/:id/messages` | any | Message history |
+| `GET` | `/api/sessions/:id/messages/batch/:batchId` | any | Bulk send status |
+| `POST` | `/api/sessions/:id/messages/batch/:batchId/cancel` | operator | Cancel running batch |
+
+### Auth / API Keys
+
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/auth/api-keys` | Create a new key (returns raw key once) |
+| `GET` | `/api/auth/api-keys` | List all keys |
+| `PUT` | `/api/auth/api-keys/:id` | Update name, role, or IP restrictions |
+| `DELETE` | `/api/auth/api-keys/:id` | Delete a key |
+| `POST` | `/api/auth/api-keys/:id/revoke` | Revoke without deleting |
+
+---
+
+## Usage Examples
 
 ```bash
-curl -X POST http://localhost:2785/api/sessions/{sessionId}/messages/send-text \
+KEY="your-secret-key"   # whatever you set in API_KEY
+BASE="http://localhost:2785/api"
+```
+
+### 1. Create and authenticate a session
+
+```bash
+# Create
+curl -s -X POST $BASE/sessions \
+  -H "X-API-Key: $KEY" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{"name": "otp-sender"}'
+
+# Start — Puppeteer launches Chromium in the background
+SESSION_ID="<id from above response>"
+curl -s -X POST $BASE/sessions/$SESSION_ID/start \
+  -H "X-API-Key: $KEY"
+
+# Open in browser — scan with WhatsApp → Linked Devices → Link a Device
+# The page refreshes automatically; closes with a ✅ once authenticated.
+open $BASE/sessions/$SESSION_ID/qr/scan
+```
+
+### 2. Send a single OTP
+
+```bash
+curl -s -X POST $BASE/sessions/$SESSION_ID/messages/send-text \
+  -H "X-API-Key: $KEY" \
+  -H "Content-Type: application/json" \
   -d '{
-    "chatId": "628123456789@c.us",
-    "text": "Hello from OpenWA!"
+    "chatId": "966512345678@c.us",
+    "text": "Your OTP is: 482910. Valid for 5 minutes."
   }'
 ```
 
-### Setup Webhook
+```json
+{ "messageId": "true_966512345678@c.us_3EB0123456789", "timestamp": 1706868000 }
+```
+
+### 3. Bulk send with variable substitution
 
 ```bash
-curl -X POST http://localhost:2785/api/sessions/{sessionId}/webhooks \
+curl -s -X POST $BASE/sessions/$SESSION_ID/messages/send-bulk \
+  -H "X-API-Key: $KEY" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
   -d '{
-    "url": "https://your-server.com/webhook",
-    "events": ["message.received", "session.status"],
-    "secret": "your-hmac-secret"
+    "messages": [
+      { "chatId": "966512345678@c.us", "text": "Hi {name}, your OTP is {otp}.", "variables": { "name": "Ahmed", "otp": "482910" } },
+      { "chatId": "966598765432@c.us", "text": "Hi {name}, your OTP is {otp}.", "variables": { "name": "Sara",  "otp": "731204" } }
+    ],
+    "options": { "delayBetweenMessages": 3000, "randomizeDelay": true }
   }'
+```
+
+Returns **202 Accepted** immediately — processing is async:
+
+```json
+{
+  "batchId": "batch_c1b723c0",
+  "status": "pending",
+  "totalMessages": 2,
+  "estimatedCompletionTime": "2026-05-25T13:15:18Z",
+  "statusUrl": "/api/sessions/.../messages/batch/batch_c1b723c0"
+}
+```
+
+### 4. Poll batch status
+
+```bash
+curl -s $BASE/sessions/$SESSION_ID/messages/batch/batch_c1b723c0 \
+  -H "X-API-Key: $KEY"
+```
+
+```json
+{
+  "batchId": "batch_c1b723c0",
+  "status": "completed",
+  "progress": { "total": 2, "sent": 2, "failed": 0, "pending": 0, "cancelled": 0 },
+  "results": [
+    { "chatId": "966512345678@c.us", "status": "sent", "messageId": "…", "sentAt": "…" },
+    { "chatId": "966598765432@c.us", "status": "sent", "messageId": "…", "sentAt": "…" }
+  ]
+}
 ```
 
 ---
 
-## 🛠 Tech Stack
+## Bulk Send Options
 
-| Layer         | Technology              |
-| ------------- | ----------------------- |
-| **Runtime**   | Node.js 22 LTS          |
-| **Framework** | NestJS 11.x             |
-| **Language**  | TypeScript 5.x          |
-| **WA Engine** | whatsapp-web.js         |
-| **Database**  | SQLite / PostgreSQL     |
-| **Cache**     | Redis (optional)        |
-| **Storage**   | Local / S3 / MinIO      |
-| **ORM**       | TypeORM                 |
-| **Container** | Docker + Docker Compose |
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `delayBetweenMessages` | ms | `3000` | Base delay between sends (min 1000, max 60000) |
+| `randomizeDelay` | bool | `true` | Add 0–2 s of random jitter on top of the base delay |
+| `stopOnError` | bool | `false` | Abort the entire batch on the first failure |
+| `batchId` | string | auto | Custom batch ID for idempotency checks |
+
+Maximum 100 recipients per batch. Use `{variable}` placeholders in `text` and pass matching `variables` per recipient.
 
 ---
 
-## 📁 Project Structure
+## Session Lifecycle
+
+```
+CREATE  →  start  →  INITIALIZING
+                          ↓  (Puppeteer + Chromium ready)
+                       QR_READY  ──→  open /qr/scan in browser and scan
+                          ↓
+                     AUTHENTICATING
+                          ↓
+                        READY        ←── auto-reconnect on drop
+                          ↓
+                      stop / delete
+                          ↓
+                      DISCONNECTED
+```
+
+On unexpected disconnect the service retries with exponential back-off (5 attempts, base 5 s by default). Override per session via `config`:
+
+```bash
+curl -s -X POST $BASE/sessions \
+  -H "X-API-Key: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "otp-sender", "config": {"maxReconnectAttempts": 10, "reconnectBaseDelay": 3000}}'
+```
+
+---
+
+## Docker
+
+```bash
+# First run (builds image, starts container)
+docker compose up -d --build
+
+# View startup logs including API key
+docker compose logs -f openwa-api
+
+# Restart with a new API_KEY
+echo "API_KEY=new-key" > .env
+docker compose up -d --force-recreate
+
+# Stop
+docker compose down
+```
+
+The container runs as a non-root `openwa` user. All persistent state (SQLite files, session browser profiles) lives in the `openwa-data` volume mounted at `/app/data`.
+
+---
+
+## Project Structure
 
 ```
 openwa/
 ├── src/
-│   ├── main.ts                 # Application entry point
-│   ├── app.module.ts           # Root module
-│   ├── config/                 # Configuration
-│   ├── common/                 # Shared utilities
-│   │   ├── cache/              # Redis caching
-│   │   └── storage/            # File storage (Local/S3)
-│   ├── core/                   # Core systems
-│   │   ├── hooks/              # Plugin hooks
-│   │   └── plugins/            # Plugin system
-│   ├── engine/                 # WhatsApp engine abstraction
+│   ├── main.ts                        # Bootstrap, Swagger, CORS, validation
+│   ├── app.module.ts                  # Root module (TypeORM ×2, throttler)
+│   ├── config/configuration.ts        # Typed config from environment variables
+│   ├── common/                        # Filters, interceptors, logger, security
+│   ├── core/
+│   │   ├── hooks/                     # HookManager — event lifecycle hooks
+│   │   └── plugins/                   # Plugin loader & storage service
+│   ├── database/
+│   │   ├── data-source.ts             # TypeORM CLI data source (for migrations)
+│   │   └── migrations/                # SQLite & Postgres migration files
+│   ├── engine/
+│   │   ├── interfaces/                # IWhatsAppEngine, EngineStatus
+│   │   ├── adapters/                  # whatsapp-web-js.adapter.ts
+│   │   └── types/                     # whatsapp-web.js type shims
+│   ├── plugins/engines/whatsapp-web-js/  # Built-in engine plugin
 │   └── modules/
-│       ├── session/            # Session management
-│       ├── message/            # Message handling
-│       ├── webhook/            # Webhook management
-│       ├── group/              # Groups API
-│       ├── contact/            # Contacts API
-│       ├── auth/               # API key authentication
-│       ├── infra/              # Infrastructure management
-│       └── health/             # Health checks
-├── dashboard/                  # React web dashboard
-├── docs/                      # Documentation
-├── docker-compose.yml
-├── Dockerfile
-└── package.json
+│       ├── auth/                      # API key management (ADMIN / OPERATOR / VIEWER)
+│       ├── session/                   # Session CRUD, QR flow, auto-reconnect
+│       ├── message/                   # send-text, send-bulk, batch tracking
+│       └── health/                    # /health, /health/live, /health/ready
+├── data/                              # Runtime data — gitignored
+│   ├── main.sqlite                    # Auth database (API keys)
+│   ├── openwa.sqlite                  # Sessions, messages, batches
+│   └── sessions/                      # whatsapp-web.js LocalAuth state per session
+├── .env.minimal                       # Configuration reference — copy to .env
+├── docker-compose.yml                 # Single-container deployment
+└── Dockerfile                         # Multi-stage build (builder + production)
 ```
 
 ---
 
-## 📚 Documentation
+## Tech Stack
 
-Comprehensive documentation is available in the `docs/` folder:
-
-| Document                                                | Description                  |
-| ------------------------------------------------------- | ---------------------------- |
-| [Project Overview](./docs/01-project-overview.md)       | Introduction and goals       |
-| [Requirements](./docs/02-requirements-specification.md) | Feature specifications       |
-| [Architecture](./docs/03-system-architecture.md)        | System design                |
-| [Security](./docs/04-security-design.md)                | Security implementation      |
-| [Database](./docs/05-database-design.md)                | Data models and migrations   |
-| [API Spec](./docs/06-api-specification.md)              | Complete API reference       |
-| [Development](./docs/08-development-guidelines.md)      | Coding standards             |
-| [Migration Guide](./docs/14-migration-guide.md)         | Database & storage migration |
+| Layer | Technology |
+|---|---|
+| Runtime | Node.js 22 LTS |
+| Framework | NestJS 11.x |
+| Language | TypeScript 5.x |
+| WhatsApp engine | whatsapp-web.js (Puppeteer / LocalAuth) |
+| Database | SQLite via TypeORM (Postgres also supported for the data DB) |
+| Container | Docker — single image, no sidecars |
 
 ---
 
-## 🤝 Contributing
+## License
 
-We welcome contributions! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** your feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-Please read our [Development Guidelines](./docs/08-development-guidelines.md) for coding standards and best practices.
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** – free for personal and commercial use.
-
-See [LICENSE](./LICENSE) for details.
-
----
-
-<div align="center">
-
-**OpenWA** – Free, Open Source WhatsApp API Gateway
-
-[📖 Documentation](./docs/README.md) · [🔌 API Docs](http://localhost:2785/api/docs) · [🐛 Report Bug](https://github.com/rmyndharis/OpenWA/issues) · [💡 Request Feature](https://github.com/rmyndharis/OpenWA/issues)
-
-<br/>
-
-<sub>Made with ❤️ by <a href="https://github.com/rmyndharis">Yudhi Armyndharis</a> and the OpenWA Community</sub>
-
-</div>
+MIT — free for personal and commercial use.

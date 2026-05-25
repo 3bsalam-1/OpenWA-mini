@@ -9,30 +9,12 @@ import { HookManager } from '../../core/hooks';
 
 const mockEngineResult = { id: 'wa-msg-1', timestamp: 1706868000 };
 
-function createMockEngine() {
-  return {
-    sendTextMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    sendImageMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    sendVideoMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    sendAudioMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    sendDocumentMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    sendStickerMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    sendLocationMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    sendContactMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    replyToMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    forwardMessage: jest.fn().mockResolvedValue(mockEngineResult),
-    reactToMessage: jest.fn().mockResolvedValue(undefined),
-    getMessageReactions: jest.fn().mockResolvedValue([]),
-    deleteMessage: jest.fn().mockResolvedValue(undefined),
-  };
-}
-
 describe('MessageService', () => {
   let service: MessageService;
   let repository: jest.Mocked<Partial<Repository<Message>>>;
   let sessionService: jest.Mocked<Partial<SessionService>>;
   let hookManager: jest.Mocked<Partial<HookManager>>;
-  let mockEngine: ReturnType<typeof createMockEngine>;
+  let mockEngine: { sendTextMessage: jest.Mock };
 
   beforeEach(async () => {
     repository = {
@@ -41,7 +23,9 @@ describe('MessageService', () => {
       createQueryBuilder: jest.fn(),
     };
 
-    mockEngine = createMockEngine();
+    mockEngine = {
+      sendTextMessage: jest.fn().mockResolvedValue(mockEngineResult),
+    };
 
     sessionService = {
       getEngine: jest.fn().mockReturnValue(mockEngine),
@@ -87,7 +71,6 @@ describe('MessageService', () => {
         text: 'Hello',
       });
 
-      // First save: pending message before engine send
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           sessionId: 'sess-1',
@@ -97,7 +80,6 @@ describe('MessageService', () => {
           status: MessageStatus.PENDING,
         }),
       );
-      // save called twice: once for initial pending, once for status update to sent
       expect(repository.save).toHaveBeenCalledTimes(2);
     });
 
@@ -136,162 +118,6 @@ describe('MessageService', () => {
     });
   });
 
-  // ── sendImage ─────────────────────────────────────────────────────
-
-  describe('sendImage', () => {
-    it('should send image via URL', async () => {
-      const result = await service.sendImage('sess-1', {
-        chatId: '628123456789@c.us',
-        url: 'https://example.com/img.jpg',
-        caption: 'My image',
-      });
-
-      expect(result.messageId).toBe('wa-msg-1');
-      expect(mockEngine.sendImageMessage).toHaveBeenCalledWith(
-        '628123456789@c.us',
-        expect.objectContaining({ data: 'https://example.com/img.jpg', caption: 'My image' }),
-      );
-    });
-
-    it('should send image via base64 with mimetype', async () => {
-      await service.sendImage('sess-1', {
-        chatId: '628123456789@c.us',
-        base64: 'iVBORw0KGgoAAAAN...',
-        mimetype: 'image/png',
-      });
-
-      expect(mockEngine.sendImageMessage).toHaveBeenCalledWith(
-        '628123456789@c.us',
-        expect.objectContaining({ data: 'iVBORw0KGgoAAAAN...', mimetype: 'image/png' }),
-      );
-    });
-  });
-
-  // ── sendVideo / sendAudio / sendDocument / sendSticker ────────────
-
-  describe('sendVideo', () => {
-    it('should call engine.sendVideoMessage', async () => {
-      await service.sendVideo('sess-1', {
-        chatId: 'test@c.us',
-        url: 'https://example.com/video.mp4',
-      });
-      expect(mockEngine.sendVideoMessage).toHaveBeenCalled();
-    });
-  });
-
-  describe('sendAudio', () => {
-    it('should call engine.sendAudioMessage', async () => {
-      await service.sendAudio('sess-1', {
-        chatId: 'test@c.us',
-        url: 'https://example.com/audio.ogg',
-      });
-      expect(mockEngine.sendAudioMessage).toHaveBeenCalled();
-    });
-  });
-
-  describe('sendDocument', () => {
-    it('should call engine.sendDocumentMessage with filename', async () => {
-      await service.sendDocument('sess-1', {
-        chatId: 'test@c.us',
-        url: 'https://example.com/doc.pdf',
-        filename: 'report.pdf',
-      });
-      expect(mockEngine.sendDocumentMessage).toHaveBeenCalledWith(
-        'test@c.us',
-        expect.objectContaining({ filename: 'report.pdf' }),
-      );
-    });
-  });
-
-  describe('sendSticker', () => {
-    it('should call engine.sendStickerMessage', async () => {
-      await service.sendSticker('sess-1', {
-        chatId: 'test@c.us',
-        url: 'https://example.com/sticker.webp',
-      });
-      expect(mockEngine.sendStickerMessage).toHaveBeenCalled();
-    });
-  });
-
-  // ── sendLocation ──────────────────────────────────────────────────
-
-  describe('sendLocation', () => {
-    it('should send location with lat/lng', async () => {
-      const result = await service.sendLocation('sess-1', {
-        chatId: 'test@c.us',
-        latitude: -6.2088,
-        longitude: 106.8456,
-        description: 'Jakarta',
-      });
-
-      expect(result.messageId).toBe('wa-msg-1');
-      expect(mockEngine.sendLocationMessage).toHaveBeenCalledWith(
-        'test@c.us',
-        expect.objectContaining({ latitude: -6.2088, longitude: 106.8456 }),
-      );
-    });
-  });
-
-  // ── sendContact ───────────────────────────────────────────────────
-
-  describe('sendContact', () => {
-    it('should send contact with name and number', async () => {
-      const result = await service.sendContact('sess-1', {
-        chatId: 'test@c.us',
-        contactName: 'John Doe',
-        contactNumber: '+628123456789',
-      });
-
-      expect(result.messageId).toBe('wa-msg-1');
-      expect(mockEngine.sendContactMessage).toHaveBeenCalledWith(
-        'test@c.us',
-        expect.objectContaining({ name: 'John Doe', number: '+628123456789' }),
-      );
-    });
-  });
-
-  // ── reply / forward ───────────────────────────────────────────────
-
-  describe('reply', () => {
-    it('should call engine.replyToMessage with quotedMessageId', async () => {
-      await service.reply('sess-1', {
-        chatId: 'test@c.us',
-        quotedMessageId: 'wa-quoted-1',
-        text: 'This is a reply',
-      });
-
-      expect(mockEngine.replyToMessage).toHaveBeenCalledWith('test@c.us', 'wa-quoted-1', 'This is a reply');
-    });
-  });
-
-  describe('forward', () => {
-    it('should call engine.forwardMessage with from/to chats', async () => {
-      await service.forward('sess-1', {
-        fromChatId: 'from@c.us',
-        toChatId: 'to@c.us',
-        messageId: 'wa-msg-to-fwd',
-      });
-
-      expect(mockEngine.forwardMessage).toHaveBeenCalledWith('from@c.us', 'to@c.us', 'wa-msg-to-fwd');
-    });
-
-    it('should save forwarded message with toChatId', async () => {
-      await service.forward('sess-1', {
-        fromChatId: 'from@c.us',
-        toChatId: 'to@c.us',
-        messageId: 'wa-msg-to-fwd',
-      });
-
-      expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chatId: 'to@c.us',
-          body: '[Forwarded]',
-          type: 'forward',
-        }),
-      );
-    });
-  });
-
   // ── saveIncomingMessage ───────────────────────────────────────────
 
   describe('saveIncomingMessage', () => {
@@ -309,60 +135,6 @@ describe('MessageService', () => {
           direction: MessageDirection.INCOMING,
         }),
       );
-    });
-  });
-
-  // ── buildMediaInput (via sendImage) ───────────────────────────────
-
-  describe('buildMediaInput validation', () => {
-    it('should throw when neither url nor base64 is provided', async () => {
-      await expect(service.sendImage('sess-1', { chatId: 'test@c.us' })).rejects.toThrow(
-        'Either url or base64 must be provided',
-      );
-    });
-
-    it('should throw when base64 is provided without mimetype', async () => {
-      await expect(
-        service.sendImage('sess-1', {
-          chatId: 'test@c.us',
-          base64: 'data...',
-        }),
-      ).rejects.toThrow('mimetype is required when using base64 data');
-    });
-  });
-
-  // ── reactToMessage / deleteMessage ────────────────────────────────
-
-  describe('reactToMessage', () => {
-    it('should call engine.reactToMessage', async () => {
-      await service.reactToMessage('sess-1', {
-        chatId: 'test@c.us',
-        messageId: 'wa-msg-1',
-        emoji: '👍',
-      });
-
-      expect(mockEngine.reactToMessage).toHaveBeenCalledWith('test@c.us', 'wa-msg-1', '👍');
-    });
-  });
-
-  describe('deleteMessage', () => {
-    it('should call engine.deleteMessage with forEveryone default true', async () => {
-      await service.deleteMessage('sess-1', {
-        chatId: 'test@c.us',
-        messageId: 'wa-msg-1',
-      });
-
-      expect(mockEngine.deleteMessage).toHaveBeenCalledWith('test@c.us', 'wa-msg-1', true);
-    });
-
-    it('should pass forEveryone=false when specified', async () => {
-      await service.deleteMessage('sess-1', {
-        chatId: 'test@c.us',
-        messageId: 'wa-msg-1',
-        forEveryone: false,
-      });
-
-      expect(mockEngine.deleteMessage).toHaveBeenCalledWith('test@c.us', 'wa-msg-1', false);
     });
   });
 });

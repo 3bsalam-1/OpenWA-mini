@@ -9,6 +9,7 @@ import { CreateApiKeyDto, UpdateApiKeyDto } from './dto';
 import { createLogger } from '../../common/services/logger.service';
 
 const API_KEY_FILE = join(process.cwd(), 'data', '.api-key');
+const DEFAULT_KEY_NAME = 'Default Admin Key';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -20,53 +21,58 @@ export class AuthService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    // Seed a default API key if none exist
-    const count = await this.apiKeyRepository.count();
+    const envKey = process.env.API_KEY?.trim();
     let displayKey: string;
-    let isNewKey = false;
+    let keySource: 'env' | 'new' | 'existing';
 
-    if (count === 0) {
-      // Use predictable key in development, random key in production
-      displayKey =
-        process.env.NODE_ENV === 'production' ? `owa_k1_${randomBytes(32).toString('hex')}` : 'dev-admin-key';
-
-      await this.seedApiKey(displayKey, 'Default Admin Key', ApiKeyRole.ADMIN);
-      isNewKey = true;
-
-      // Save raw key to file for startup script to read
-      try {
-        writeFileSync(API_KEY_FILE, displayKey, 'utf-8');
-      } catch (err) {
-        this.logger.warn('Could not save API key file', { error: String(err) });
-      }
+    if (envKey) {
+      // Sync the env key into the DB (replace the default key if it differs)
+      await this.syncEnvKey(envKey);
+      displayKey = envKey;
+      keySource = 'env';
     } else {
-      // Read saved API key from file if exists
-      if (existsSync(API_KEY_FILE)) {
+      const count = await this.apiKeyRepository.count();
+
+      if (count === 0) {
+        // First boot, no env key — auto-generate
+        displayKey =
+          process.env.NODE_ENV === 'production' ? `owa_k1_${randomBytes(32).toString('hex')}` : 'dev-admin-key';
+        await this.seedApiKey(displayKey, DEFAULT_KEY_NAME, ApiKeyRole.ADMIN);
         try {
-          displayKey = readFileSync(API_KEY_FILE, 'utf-8').trim();
-        } catch (error) {
-          this.logger.warn(`Failed to read API key file: ${API_KEY_FILE}`, { error: String(error) });
-          displayKey = '(check dashboard for keys)';
+          writeFileSync(API_KEY_FILE, displayKey, 'utf-8');
+        } catch (err) {
+          this.logger.warn('Could not save API key file', { error: String(err) });
         }
+        keySource = 'new';
       } else {
-        displayKey = '(check dashboard for keys)';
+        // Keys already exist — read from file
+        if (existsSync(API_KEY_FILE)) {
+          try {
+            displayKey = readFileSync(API_KEY_FILE, 'utf-8').trim();
+          } catch (error) {
+            this.logger.warn(`Failed to read API key file: ${API_KEY_FILE}`, { error: String(error) });
+            displayKey = '(set API_KEY in .env to configure)';
+          }
+        } else {
+          displayKey = '(set API_KEY in .env to configure)';
+        }
+        keySource = 'existing';
       }
     }
 
-    // Always show the welcome banner on startup
     const apiBaseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 2785}`;
-    const dashboardUrl = process.env.DASHBOARD_URL || `http://localhost:${process.env.DASHBOARD_PORT || 2886}`;
 
     this.logger.log('');
     this.logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     this.logger.log('');
     this.logger.log('  🟢 Welcome to OpenWA - WhatsApp API Gateway');
     this.logger.log('');
-    this.logger.log(`  📊 Dashboard: ${dashboardUrl}`);
     this.logger.log(`  📚 API Docs:  ${apiBaseUrl}/api/docs`);
     this.logger.log('');
-    if (isNewKey) {
-      this.logger.log('  🔑 API Key (newly created):');
+    if (keySource === 'env') {
+      this.logger.log('  🔑 API Key (from API_KEY env):');
+    } else if (keySource === 'new') {
+      this.logger.log('  🔑 API Key (auto-generated — set API_KEY in .env to pin it):');
     } else {
       this.logger.log('  🔑 API Key:');
     }
@@ -76,22 +82,42 @@ export class AuthService implements OnModuleInit {
     this.logger.log('');
   }
 
+  // Ensure the env-supplied key is the active default key.
+  // If it already exists in the DB, nothing changes.
+  // If it doesn't exist, the old default key is replaced with the new value.
+  private async syncEnvKey(rawKey: string): Promise<void> {
+    const keyHash = this.hashKey(rawKey);
+    const existing = await this.apiKeyRepository.findOne({ where: { keyHash } });
+    if (existing) return; // env key already active
+
+    // Replace the auto-seeded default key with the new env value
+    const defaultKey = await this.apiKeyRepository.findOne({ where: { name: DEFAULT_KEY_NAME } });
+    if (defaultKey) {
+      defaultKey.keyHash = keyHash;
+      defaultKey.keyPrefix = rawKey.substring(0, 12);
+      await this.apiKeyRepository.save(defaultKey);
+    } else {
+      await this.seedApiKey(rawKey, DEFAULT_KEY_NAME, ApiKeyRole.ADMIN);
+    }
+
+    try {
+      writeFileSync(API_KEY_FILE, rawKey, 'utf-8');
+    } catch (err) {
+      this.logger.warn('Could not save API key file', { error: String(err) });
+    }
+
+    this.logger.log('API key updated from API_KEY env variable', { action: 'api_key_synced' });
+  }
+
   private async seedApiKey(rawKey: string, name: string, role: ApiKeyRole): Promise<ApiKey> {
     const keyHash = this.hashKey(rawKey);
     const keyPrefix = rawKey.substring(0, 12);
 
-    const apiKey = this.apiKeyRepository.create({
-      name,
-      keyHash,
-      keyPrefix,
-      role,
-    });
-
+    const apiKey = this.apiKeyRepository.create({ name, keyHash, keyPrefix, role });
     return this.apiKeyRepository.save(apiKey);
   }
 
   async createApiKey(dto: CreateApiKeyDto): Promise<{ apiKey: ApiKey; rawKey: string }> {
-    // Generate secure random key: owa_k1_<32 bytes hex>
     const rawKey = `owa_k1_${randomBytes(32).toString('hex')}`;
     const keyHash = this.hashKey(rawKey);
     const keyPrefix = rawKey.substring(0, 12);
@@ -107,19 +133,13 @@ export class AuthService implements OnModuleInit {
     });
 
     const saved = await this.apiKeyRepository.save(apiKey);
-    this.logger.log(`API key created: ${saved.name}`, {
-      keyId: saved.id,
-      role: saved.role,
-      action: 'api_key_created',
-    });
+    this.logger.log(`API key created: ${saved.name}`, { keyId: saved.id, role: saved.role, action: 'api_key_created' });
 
     return { apiKey: saved, rawKey };
   }
 
   async findAll(): Promise<ApiKey[]> {
-    return this.apiKeyRepository.find({
-      order: { createdAt: 'DESC' },
-    });
+    return this.apiKeyRepository.find({ order: { createdAt: 'DESC' } });
   }
 
   async findOne(id: string): Promise<ApiKey> {
@@ -145,10 +165,7 @@ export class AuthService implements OnModuleInit {
   async delete(id: string): Promise<void> {
     const apiKey = await this.findOne(id);
     await this.apiKeyRepository.remove(apiKey);
-    this.logger.log(`API key deleted: ${apiKey.name}`, {
-      keyId: id,
-      action: 'api_key_deleted',
-    });
+    this.logger.log(`API key deleted: ${apiKey.name}`, { keyId: id, action: 'api_key_deleted' });
   }
 
   async revoke(id: string): Promise<ApiKey> {
@@ -173,25 +190,19 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('API key has expired');
     }
 
-    // Check IP whitelist
     if (apiKey.allowedIps && apiKey.allowedIps.length > 0 && clientIp) {
       if (!this.isIpAllowed(clientIp, apiKey.allowedIps)) {
-        this.logger.warn(`IP not allowed: ${clientIp}`, {
-          keyId: apiKey.id,
-          action: 'ip_rejected',
-        });
+        this.logger.warn(`IP not allowed: ${clientIp}`, { keyId: apiKey.id, action: 'ip_rejected' });
         throw new UnauthorizedException('IP address not allowed');
       }
     }
 
-    // Check session restriction
     if (apiKey.allowedSessions && apiKey.allowedSessions.length > 0 && sessionId) {
       if (!apiKey.allowedSessions.includes(sessionId)) {
         throw new UnauthorizedException('API key not authorized for this session');
       }
     }
 
-    // Update usage stats
     apiKey.lastUsedAt = new Date();
     apiKey.usageCount += 1;
     await this.apiKeyRepository.save(apiKey);
@@ -204,41 +215,24 @@ export class AuthService implements OnModuleInit {
   }
 
   private isIpAllowed(clientIp: string, allowedIps: string[]): boolean {
-    // Phase 3 Security Audit: Support both exact match and CIDR notation
     for (const entry of allowedIps) {
       if (entry.includes('/')) {
-        // CIDR notation (e.g., "10.0.0.0/24")
-        if (this.ipInCidr(clientIp, entry)) {
-          return true;
-        }
+        if (this.ipInCidr(clientIp, entry)) return true;
       } else {
-        // Exact match
-        if (clientIp === entry) {
-          return true;
-        }
+        if (clientIp === entry) return true;
       }
     }
     return false;
   }
 
-  /**
-   * Check if an IPv4 address is within a CIDR range
-   * @param ip - Client IP address (e.g., "192.168.1.100")
-   * @param cidr - CIDR notation (e.g., "192.168.1.0/24")
-   */
   private ipInCidr(ip: string, cidr: string): boolean {
     try {
       const [range, bitsStr] = cidr.split('/');
       const bits = parseInt(bitsStr, 10);
-
-      if (isNaN(bits) || bits < 0 || bits > 32) {
-        return false;
-      }
-
+      if (isNaN(bits) || bits < 0 || bits > 32) return false;
       const mask = ~(2 ** (32 - bits) - 1);
       const ipNum = this.ipToNumber(ip);
       const rangeNum = this.ipToNumber(range);
-
       return (ipNum & mask) === (rangeNum & mask);
     } catch (error) {
       this.logger.warn(`Invalid CIDR format: ${cidr}`, { error: String(error) });
@@ -246,13 +240,9 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  /**
-   * Convert IPv4 address string to 32-bit number
-   */
   private ipToNumber(ip: string): number {
     const parts = ip.split('.');
     if (parts.length !== 4) return 0;
-
     return parts.reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
   }
 
@@ -262,7 +252,6 @@ export class AuthService implements OnModuleInit {
       [ApiKeyRole.OPERATOR]: 2,
       [ApiKeyRole.ADMIN]: 3,
     };
-
     return roleHierarchy[apiKey.role] >= roleHierarchy[requiredRole];
   }
 }

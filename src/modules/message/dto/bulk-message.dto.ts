@@ -1,56 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString,
-  IsArray,
-  IsOptional,
-  IsNumber,
-  IsBoolean,
-  ValidateNested,
-  Min,
-  Max,
-  ArrayMaxSize,
-} from 'class-validator';
+import { IsString, IsArray, IsOptional, IsNumber, IsBoolean, ValidateNested, Min, Max, ArrayMaxSize, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class BulkMessageContentDto {
-  @ApiPropertyOptional({ description: 'Text content for text messages' })
-  @IsOptional()
-  @IsString()
-  text?: string;
-
-  @ApiPropertyOptional({ description: 'Image URL or base64' })
-  image?: { url?: string; base64?: string; mimetype?: string };
-
-  @ApiPropertyOptional({ description: 'Video URL or base64' })
-  video?: { url?: string; base64?: string; mimetype?: string };
-
-  @ApiPropertyOptional({ description: 'Audio URL or base64' })
-  audio?: { url?: string; base64?: string; mimetype?: string };
-
-  @ApiPropertyOptional({ description: 'Document URL or base64' })
-  document?: { url?: string; base64?: string; mimetype?: string; filename?: string };
-
-  @ApiPropertyOptional({ description: 'Caption for media messages' })
-  @IsOptional()
-  @IsString()
-  caption?: string;
-}
-
 class BulkMessageItemDto {
-  @ApiProperty({ description: 'Recipient chat ID', example: '628123456789@c.us' })
+  @ApiProperty({ description: 'Recipient chat ID', example: '966512345678@c.us' })
   @IsString()
+  @IsNotEmpty()
   chatId: string;
 
-  @ApiProperty({ description: 'Message type', enum: ['text', 'image', 'video', 'audio', 'document'] })
+  @ApiProperty({ description: 'Text message content', maxLength: 4096 })
   @IsString()
-  type: 'text' | 'image' | 'video' | 'audio' | 'document';
+  @IsNotEmpty()
+  text: string;
 
-  @ApiProperty({ description: 'Message content based on type' })
-  @ValidateNested()
-  @Type(() => BulkMessageContentDto)
-  content: BulkMessageContentDto;
-
-  @ApiPropertyOptional({ description: 'Variables for template substitution' })
+  @ApiPropertyOptional({ description: 'Template variables for substitution (e.g. {name} → "Ahmed")' })
   @IsOptional()
   variables?: Record<string, string>;
 }
@@ -80,14 +43,14 @@ export class SendBulkMessageDto {
   @IsString()
   batchId?: string;
 
-  @ApiProperty({ description: 'Array of messages (max 100 per request)', type: [BulkMessageItemDto] })
+  @ApiProperty({ description: 'Recipients and their messages (max 100)', type: [BulkMessageItemDto] })
   @IsArray()
   @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => BulkMessageItemDto)
   messages: BulkMessageItemDto[];
 
-  @ApiPropertyOptional({ description: 'Batch processing options' })
+  @ApiPropertyOptional()
   @IsOptional()
   @ValidateNested()
   @Type(() => BulkMessageOptionsDto)

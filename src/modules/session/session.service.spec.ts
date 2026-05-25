@@ -5,8 +5,6 @@ import { NotFoundException, ConflictException, BadRequestException } from '@nest
 import { SessionService } from './session.service';
 import { Session, SessionStatus } from './entities/session.entity';
 import { EngineFactory } from '../../engine/engine.factory';
-import { EventsGateway } from '../events/events.gateway';
-import { WebhookService } from '../webhook/webhook.service';
 import { HookManager } from '../../core/hooks';
 
 function createMockSession(overrides: Partial<Session> = {}): Session {
@@ -32,8 +30,6 @@ describe('SessionService', () => {
   let repository: jest.Mocked<Partial<Repository<Session>>>;
   let dataSource: jest.Mocked<Partial<DataSource>>;
   let engineFactory: jest.Mocked<Partial<EngineFactory>>;
-  let eventsGateway: jest.Mocked<Partial<EventsGateway>>;
-  let webhookService: jest.Mocked<Partial<WebhookService>>;
   let hookManager: jest.Mocked<Partial<HookManager>>;
   let mockEngine: Record<string, jest.Mock>;
 
@@ -63,20 +59,10 @@ describe('SessionService', () => {
       destroy: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
       getQRCode: jest.fn().mockReturnValue(null),
-      getGroups: jest.fn().mockResolvedValue([]),
     };
 
     engineFactory = {
       create: jest.fn().mockReturnValue(mockEngine),
-    };
-
-    eventsGateway = {
-      emitSessionStatus: jest.fn(),
-      emitMessage: jest.fn(),
-    };
-
-    webhookService = {
-      dispatch: jest.fn().mockResolvedValue(undefined),
     };
 
     hookManager = {
@@ -95,8 +81,6 @@ describe('SessionService', () => {
           useValue: dataSource,
         },
         { provide: EngineFactory, useValue: engineFactory },
-        { provide: EventsGateway, useValue: eventsGateway },
-        { provide: WebhookService, useValue: webhookService },
         { provide: HookManager, useValue: hookManager },
       ],
     }).compile();
@@ -109,7 +93,7 @@ describe('SessionService', () => {
   describe('create', () => {
     it('should create a new session with CREATED status', async () => {
       const session = createMockSession();
-      (repository.findOne as jest.Mock).mockResolvedValue(null); // no duplicate
+      (repository.findOne as jest.Mock).mockResolvedValue(null);
       (repository.create as jest.Mock).mockReturnValue(session);
       (repository.save as jest.Mock).mockResolvedValue(session);
 
@@ -201,10 +185,7 @@ describe('SessionService', () => {
       (repository.update as jest.Mock).mockResolvedValue({ affected: 1 });
       (repository.remove as jest.Mock).mockResolvedValue(session);
 
-      // Start the session first to create an engine
       await service.start('sess-uuid-1');
-
-      // Now delete
       await service.delete('sess-uuid-1');
 
       expect(mockEngine.destroy).toHaveBeenCalled();
@@ -261,10 +242,7 @@ describe('SessionService', () => {
       (repository.findOne as jest.Mock).mockResolvedValue(session);
       (repository.update as jest.Mock).mockResolvedValue({ affected: 1 });
 
-      // Start first
       await service.start('sess-uuid-1');
-
-      // Stop
       await service.stop('sess-uuid-1');
 
       expect(mockEngine.disconnect).toHaveBeenCalled();

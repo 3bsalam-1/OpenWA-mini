@@ -16,13 +16,7 @@ export type HookEvent =
   | 'message:sending'
   | 'message:sent'
   | 'message:failed'
-  | 'message:ack'
-  // Webhook lifecycle
-  | 'webhook:before'
-  | 'webhook:queued' // After webhook job added to queue (queue mode only)
-  | 'webhook:delivered' // After webhook successfully delivered (direct or queue)
-  | 'webhook:after' // After webhook attempt (direct mode only, deprecated for queue)
-  | 'webhook:error'; // After webhook delivery failed (all retries exhausted)
+  | 'message:ack';
 
 export interface HookContext<T = unknown> {
   event: HookEvent;
