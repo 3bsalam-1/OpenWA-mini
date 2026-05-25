@@ -103,7 +103,14 @@ export class MessageService {
 
   private async saveOutgoingMessage(
     sessionId: string,
-    data: { waMessageId?: string; chatId: string; body?: string; type: string; timestamp?: number; status?: MessageStatus },
+    data: {
+      waMessageId?: string;
+      chatId: string;
+      body?: string;
+      type: string;
+      timestamp?: number;
+      status?: MessageStatus;
+    },
   ): Promise<Message> {
     const session = await this.sessionService.findOne(sessionId);
     const message = this.messageRepository.create({

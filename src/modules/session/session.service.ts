@@ -157,11 +157,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
       throw new BadRequestException('Session is already started');
     }
 
-    await this.hookManager.execute(
-      'session:starting',
-      { sessionId: id },
-      { sessionId: id, source: 'SessionService' },
-    );
+    await this.hookManager.execute('session:starting', { sessionId: id }, { sessionId: id, source: 'SessionService' });
 
     const config = session.config as { maxReconnectAttempts?: number; reconnectBaseDelay?: number } | null;
     this.reconnectStates.set(id, {

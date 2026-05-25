@@ -55,7 +55,9 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
       if (this.config.proxy) {
         puppeteerArgs.push(`--proxy-server=${this.config.proxy.url}`);
-        this.logger.log(`Using proxy: ${this.config.proxy.type}://${this.config.proxy.url.replace(/:[^:@]*@/, ':***@')}`);
+        this.logger.log(
+          `Using proxy: ${this.config.proxy.type}://${this.config.proxy.url.replace(/:[^:@]*@/, ':***@')}`,
+        );
       }
 
       this.client = new Client({

@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional, IsNumber, IsBoolean, ValidateNested, Min, Max, ArrayMaxSize, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+  ValidateNested,
+  Min,
+  Max,
+  ArrayMaxSize,
+  IsNotEmpty,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class BulkMessageItemDto {

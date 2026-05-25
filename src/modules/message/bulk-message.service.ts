@@ -2,7 +2,13 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { MessageBatch, BatchStatus, BatchMessageStatus, BatchProgress, BatchMessageResult } from './entities/message-batch.entity';
+import {
+  MessageBatch,
+  BatchStatus,
+  BatchMessageStatus,
+  BatchProgress,
+  BatchMessageResult,
+} from './entities/message-batch.entity';
 import { SendBulkMessageDto } from './dto/bulk-message.dto';
 import { SessionService } from '../session/session.service';
 
@@ -163,7 +169,8 @@ export class BulkMessageService {
     }
 
     if (this.processingBatches.get(batch.id)) {
-      batch.status = batch.progress.failed > 0 && batch.progress.sent === 0 ? BatchStatus.FAILED : BatchStatus.COMPLETED;
+      batch.status =
+        batch.progress.failed > 0 && batch.progress.sent === 0 ? BatchStatus.FAILED : BatchStatus.COMPLETED;
     }
     batch.completedAt = new Date();
     batch.results = results;
