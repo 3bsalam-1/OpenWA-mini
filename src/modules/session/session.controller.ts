@@ -116,7 +116,7 @@ export class SessionController {
   @ApiOperation({ summary: 'Open QR code in browser — auto-refreshes every 3s until authenticated' })
   @ApiParam({ name: 'id', description: 'Session ID' })
   @ApiResponse({ status: 200, description: 'HTML page with scannable QR' })
-  async getQRScanPage(@Param('id') id: string, @Res() res: Response): Promise<void> {
+  getQRScanPage(@Param('id') id: string, @Res() res: Response): void {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(`<!DOCTYPE html>
 <html lang="en">
