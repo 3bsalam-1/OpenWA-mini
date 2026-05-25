@@ -8,7 +8,7 @@ dist/
 build/
 .next/
 out/
-
+report-gen/
 # Testing
 coverage/
 
@@ -72,3 +72,4 @@ uploads/
 docs/plans/
 CLAUDE.md
 _docs/
+OpenWA-Mini-Project-Report.docx
