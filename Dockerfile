@@ -18,6 +18,9 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
+# Prune dev dependencies — native modules are already compiled here
+RUN npm prune --production
+
 # ===== Stage 2: Production =====
 FROM node:22-slim AS production
 
@@ -52,9 +55,7 @@ RUN groupadd -r openwa-mini && useradd -r -g openwa-mini openwa-mini
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
-
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 RUN mkdir -p ./data/sessions && \
